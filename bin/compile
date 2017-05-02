@@ -1,0 +1,111 @@
+#!/usr/bin/env bash
+# bin/compile <build-dir> <cache-dir> <env-dir>
+
+### Constants
+
+FILE_URL="https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-153.0.0-linux-x86_64.tar.gz"
+FILE_NAME="google-cloud-sdk-153.0.0-linux-x86_64.tar.gz"
+
+### Configure directories
+
+BUILD_DIR=${1:-}
+CACHE_DIR=${2:-}
+ENV_DIR=${3:-}
+
+echo "-----> Downloading and unpacking the Google Cloud SDK"
+
+# change to the the BUILD_DIR ($1)
+cd $BUILD_DIR
+
+# download the binary (-O) silently (-s)
+curl $FILE_URL -s -O
+
+# make a *barf* vendor dir
+mkdir $BUILD_DIR/vendor
+
+# untar
+tar xf $FILE_NAME -C $BUILD_DIR/vendor
+
+# delete
+rm $FILE_NAME
+
+echo "-----> Installing the Google Cloud SDK"
+
+# install our SDK silently
+# (google apparently doesn't really know what silent means)
+$BUILD_DIR/vendor/google-cloud-sdk/install.sh -q
+
+if [ -f $ENV_DIR/GOOGLE_TYPE ] && \
+   [ -f $ENV_DIR/GOOGLE_PROJECT_ID ] && \
+   [ -f $ENV_DIR/GOOGLE_PRIVATE_KEY_ID ] && \
+   [ -f $ENV_DIR/GOOGLE_PRIVATE_KEY ] && \
+   [ -f $ENV_DIR/GOOGLE_CLIENT_EMAIL ] && \
+   [ -f $ENV_DIR/GOOGLE_CLIENT_ID ] && \
+   [ -f $ENV_DIR/GOOGLE_AUTH_URI ] && \
+   [ -f $ENV_DIR/GOOGLE_TOKEN_URI ] && \
+   [ -f $ENV_DIR/GOOGLE_AUTH_PROVIDER_CERT ] && \
+   [ -f $ENV_DIR/GOOGLE_CLIENT_CERT ]
+then
+echo "------> Generating our credentials file"
+
+echo -n -e '{\n' > $BUILD_DIR/google-credentials.json
+echo -n -e '  "type": "' >> $BUILD_DIR/google-credentials.json
+cat $ENV_DIR/GOOGLE_TYPE >> $BUILD_DIR/google-credentials.json
+echo -n -e '",\n' >> $BUILD_DIR/google-credentials.json
+
+echo -n -e '  "project_id": "' >> $BUILD_DIR/google-credentials.json
+cat $ENV_DIR/GOOGLE_PROJECT_ID >> $BUILD_DIR/google-credentials.json
+echo -n -e '",\n' >> $BUILD_DIR/google-credentials.json
+
+echo -n -e '  "private_key_id": "' >> $BUILD_DIR/google-credentials.json
+cat $ENV_DIR/GOOGLE_PRIVATE_KEY_ID >> $BUILD_DIR/google-credentials.json
+echo -n -e '",\n' >> $BUILD_DIR/google-credentials.json
+
+echo -n -e '  "private_key": "' >> $BUILD_DIR/google-credentials.json
+cat $ENV_DIR/GOOGLE_PRIVATE_KEY >> $BUILD_DIR/google-credentials.json
+echo -n -e '",\n' >> $BUILD_DIR/google-credentials.json
+
+echo -n -e '  "client_email": "' >> $BUILD_DIR/google-credentials.json
+cat $ENV_DIR/GOOGLE_CLIENT_EMAIL >> $BUILD_DIR/google-credentials.json
+echo -n -e '",\n' >> $BUILD_DIR/google-credentials.json
+
+echo -n -e '  "client_id": "' >> $BUILD_DIR/google-credentials.json
+cat $ENV_DIR/GOOGLE_CLIENT_ID >> $BUILD_DIR/google-credentials.json
+echo -n -e '",\n' >> $BUILD_DIR/google-credentials.json
+
+echo -n -e '  "auth_uri": "' >> $BUILD_DIR/google-credentials.json
+cat $ENV_DIR/GOOGLE_AUTH_URI >> $BUILD_DIR/google-credentials.json
+echo -n -e '",\n' >> $BUILD_DIR/google-credentials.json
+
+echo -n -e '  "token_uri": "' >> $BUILD_DIR/google-credentials.json
+cat $ENV_DIR/GOOGLE_TOKEN_URI >> $BUILD_DIR/google-credentials.json
+echo -n -e '",\n' >> $BUILD_DIR/google-credentials.json
+
+echo -n -e '  "auth_provider_x509_cert_url": "' >> $BUILD_DIR/google-credentials.json
+cat $ENV_DIR/GOOGLE_AUTH_PROVIDER_CERT >> $BUILD_DIR/google-credentials.json
+echo -n -e '",\n' >> $BUILD_DIR/google-credentials.json
+
+echo -n -e '  "client_x509_cert_url": "' >> $BUILD_DIR/google-credentials.json
+cat $ENV_DIR/GOOGLE_CLIENT_CERT >> $BUILD_DIR/google-credentials.json
+echo -n -e '"\n' >> $BUILD_DIR/google-credentials.json
+
+echo -n -e '}' >> $BUILD_DIR/google-credentials.json
+
+echo "------> Generating profile script"
+
+mkdir -p $BUILD_DIR/.profile.d
+cat <<EOF >$BUILD_DIR/.profile.d/heroku-google-cloud.sh
+export PATH="/app/vendor/google-cloud-sdk/bin:\$PATH"
+gcloud auth activate-service-account --key-file /app/google-credentials.json
+EOF
+
+else 
+echo "------> Missing credentials env var; not generating"
+
+echo "------> Generating profile script"
+mkdir -p $BUILD_DIR/.profile.d
+cat <<EOF >$BUILD_DIR/.profile.d/heroku-google-cloud.sh
+export PATH="/app/vendor/google-cloud-sdk/bin:\$PATH"
+EOF
+
+fi
