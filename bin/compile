@@ -3,7 +3,7 @@
 
 ### Constants
 
-FILE_URL="https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-153.0.0-linux-x86_64.tar.gz"
+FILE_URL="https://github.com/lepinsk/heroku-google-cloud-buildpack/releases/download/v1.0/google-cloud-sdk-153.0.0-linux-x86_64.tar.gz"
 FILE_NAME="google-cloud-sdk-153.0.0-linux-x86_64.tar.gz"
 
 ### Configure directories
@@ -18,7 +18,7 @@ echo "-----> Downloading and unpacking the Google Cloud SDK"
 cd $BUILD_DIR
 
 # download the binary (-O) silently (-s)
-curl $FILE_URL -s -O
+curl $FILE_URL -L -s -O
 
 # make a *barf* vendor dir
 mkdir $BUILD_DIR/vendor
